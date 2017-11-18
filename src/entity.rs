@@ -1,5 +1,6 @@
 use world;
 
+const DEACCELERATION: f32 = 0.01;
 pub type Coordinate = f32;
 pub type Point = [Coordinate; 2];
 pub type Vector = [f32; 2];
@@ -47,6 +48,8 @@ impl Entity
                 }
             }
         }
+        self.velocity = [self.velocity[0] * (1.0 - DEACCELERATION),
+                         self.velocity[1] * (1.0 - DEACCELERATION)];
         let from = self.position;
         let to = [from[0] + self.velocity[0], from[1] + self.velocity[1]];
         let to_map = [(to[0] + 0.5) as world::Coordinate, (to[1] + 0.5) as world::Coordinate];
