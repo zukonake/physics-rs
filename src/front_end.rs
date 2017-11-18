@@ -250,7 +250,7 @@ impl WorldRenderer
             }
         };
         let [ex, ey] = entity.position;
-        let center = [ex - (3f32.sqrt() / 2.0), ey];
+        let center = [ex - (ENTITY_SIZE / 2.0), ey];
         let direction = normalize(entity.velocity);
         let angle = direction[1].atan2(direction[0]);
         [
