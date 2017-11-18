@@ -6,12 +6,18 @@ use glium::glutin;
 use glium::Surface;
 
 use world;
+use entity;
+
+type Point = [f32; 2];
+type Size = [f32; 2];
+type Color = [f32; 4];
+type Index = u32;
 
 #[derive(Copy, Clone, Default)]
 pub struct Vertex
 {
-    position: [f32; 2],
-    color: [f32; 4],
+    position: Point,
+    color: Color,
 }
 
 implement_vertex!(Vertex, position, color);
@@ -77,7 +83,7 @@ impl Client
                                 &Default::default()).unwrap()
     }
 
-    pub fn clear_color(&mut self, (r, g, b, a): (f32, f32, f32, f32)) -> ()
+    pub fn clear_color(&mut self, [r, g, b, a]: Color) -> ()
     {
         self.current_frame.clear_color(r, g, b, a)
     }
@@ -88,10 +94,10 @@ impl Client
         self.current_frame = self.display.draw();
     }
 
-    pub fn window_size(&self) -> (f32, f32)
+    pub fn window_size(&self) -> Size
     {
         let (w, h) = self.display.gl_window().get_inner_size().unwrap();
-        (w as f32, h as f32)
+        [w as f32, h as f32]
     }
 }
 
@@ -108,7 +114,7 @@ const ENTITY_SIZE: f32 = 2.0;
 pub struct WorldRenderer
 {
     pub map_vertices: glium::VertexBuffer<Vertex>,
-    pub map_indices: glium::index::IndexBuffer<u32>,
+    pub map_indices: glium::index::IndexBuffer<Index>,
     pub entities_vertices: glium::VertexBuffer<Vertex>,
     pub entities_indices: glium::index::NoIndices,
 }
@@ -131,15 +137,15 @@ impl WorldRenderer
         let map_vertices = glium::VertexBuffer::dynamic(display, &vertices).unwrap();
 
         const INDICES_NUMBER: usize = world::WIDTH * world::HEIGHT * 6;
-        let mut indices: [u32; INDICES_NUMBER] = [0; INDICES_NUMBER];
+        let mut indices: [Index; INDICES_NUMBER] = [0; INDICES_NUMBER];
         for i in 0..(world::WIDTH * world::HEIGHT)
         {
-            indices[(i * 6) + 0] = (i as u32 * 4) + 0;
-            indices[(i * 6) + 1] = (i as u32 * 4) + 1;
-            indices[(i * 6) + 2] = (i as u32 * 4) + 2;
-            indices[(i * 6) + 3] = (i as u32 * 4) + 0;
-            indices[(i * 6) + 4] = (i as u32 * 4) + 2;
-            indices[(i * 6) + 5] = (i as u32 * 4) + 3;
+            indices[(i * 6) + 0] = (i as Index * 4) + 0;
+            indices[(i * 6) + 1] = (i as Index * 4) + 1;
+            indices[(i * 6) + 2] = (i as Index * 4) + 2;
+            indices[(i * 6) + 3] = (i as Index * 4) + 0;
+            indices[(i * 6) + 4] = (i as Index * 4) + 2;
+            indices[(i * 6) + 5] = (i as Index * 4) + 3;
         }
         let map_indices =
             glium::index::IndexBuffer::dynamic(display, glium::index::PrimitiveType::TrianglesList,
@@ -189,9 +195,42 @@ impl WorldRenderer
                 vertices[(i * 4) + j].color = color;
             }
         }
+        //TODO check for size change instead of resizing every time
+        if world.entities.0.len() * std::mem::size_of::<Vertex>() * 3 != self.entities_vertices.get_size()
+        {
+            let mut vertices = Vec::new();
+            for i in 0..world.entities.0.len()
+            {
+                let vertices_positions = Self::get_entity_vertices_positions(&world.entities.0[i]);
+                let color = [1.0, 1.0, 1.0, 0.5];
+                let mut triangle =
+                vec!
+                [
+                    Vertex{position: vertices_positions[0], color: color},
+                    Vertex{position: vertices_positions[1], color: color},
+                    Vertex{position: vertices_positions[2], color: color},
+                ];
+                vertices.append(&mut triangle);
+            }
+            self.entities_vertices = glium::VertexBuffer::dynamic(display, &vertices).unwrap();
+        }
+        else
+        {
+            let mut vertices = self.entities_vertices.map();
+            for i in 0..world.entities.0.len()
+            {
+                let vertices_positions = Self::get_entity_vertices_positions(&world.entities.0[i]);
+                vertices[(i * 3) + 0].position = vertices_positions[0];
+                vertices[(i * 3) + 1].position = vertices_positions[1];
+                vertices[(i * 3) + 2].position = vertices_positions[2];
+            }
+        }
+    }
+
+    fn get_entity_vertices_positions(entity: &entity::Entity) -> [Point; 3]
+    {
         use entity::Point;
         use entity::Vector;
-        //TODO check for size change instead of resizing every time
         let rotate_point = |[cx, cy]: Point, angle: f32, [px, py]: Point| -> Point
         {
             let x = angle.cos() * (px - cx) - angle.sin() * (py - cy) + cx;
@@ -210,25 +249,14 @@ impl WorldRenderer
                 [x / length, y / length]
             }
         };
-        let mut vertices = Vec::new();
-        for i in 0..world.entities.0.len()
-        {
-            let entity = &world.entities.0[i];
-            let [ex, ey] = entity.position;
-            let center = [ex - (3f32.sqrt() / 2.0), ey];
-            let direction = normalize(entity.velocity);
-            let angle = direction[1].atan2(direction[0]);
-            let vertex0 = rotate_point(center, angle, entity.position);
-            let vertex1 = rotate_point(center, angle, [ex - ENTITY_SIZE, ey - (ENTITY_SIZE / 2.0)]);
-            let vertex2 = rotate_point(center, angle, [ex - ENTITY_SIZE, ey + (ENTITY_SIZE / 2.0)]);
-            let mut triangle =
-            vec![
-                Vertex{position: vertex0, color: [1.0, 1.0, 1.0, 0.5]},
-                Vertex{position: vertex1, color: [1.0, 1.0, 1.0, 0.5]},
-                Vertex{position: vertex2, color: [1.0, 1.0, 1.0, 0.5]},
-            ];
-            vertices.append(&mut triangle);
-        }
-        self.entities_vertices = glium::VertexBuffer::dynamic(display, &vertices).unwrap();
+        let [ex, ey] = entity.position;
+        let center = [ex - (3f32.sqrt() / 2.0), ey];
+        let direction = normalize(entity.velocity);
+        let angle = direction[1].atan2(direction[0]);
+        [
+            rotate_point(center, angle, entity.position),
+            rotate_point(center, angle, [ex - ENTITY_SIZE, ey - (ENTITY_SIZE / 2.0)]),
+            rotate_point(center, angle, [ex - ENTITY_SIZE, ey + (ENTITY_SIZE / 2.0)]),
+        ]
     }
 }

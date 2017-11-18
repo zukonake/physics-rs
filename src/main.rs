@@ -23,7 +23,7 @@ fn main()
     let mut world_renderer = front_end::WorldRenderer::new(&client.display);
     let mut world = world::World::new();
     let window_size = client.window_size();
-    let scale = [window_size.0 / world::WIDTH as f32, window_size.1 / world::HEIGHT as f32];
+    let scale = [window_size[0] / world::WIDTH as f32, window_size[1] / world::HEIGHT as f32];
 
     let matrix: [[f32; 3]; 3] =
        [[scale[0], 0.0, 0.0],
@@ -73,7 +73,7 @@ fn main()
             }
         }
         world_renderer.update(&world, &client.display);
-        client.clear_color((0.0, 0.0, 0.0, 1.0));
+        client.clear_color([0.0, 0.0, 0.0, 1.0]);
         client.draw(&world_renderer.map_vertices, &world_renderer.map_indices, &uniforms);
         client.draw(&world_renderer.entities_vertices, &world_renderer.entities_indices, &uniforms);
         client.display();
