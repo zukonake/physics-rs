@@ -122,7 +122,7 @@ pub struct WorldRenderer
 impl WorldRenderer
 {
     pub fn new(display: &glium::backend::glutin::Display) -> Self
-    {//TODO errors
+    {
         const QUADS_NUMBER: usize = world::WIDTH * world::HEIGHT * 4;
         let mut vertices: [Vertex; QUADS_NUMBER] = [Vertex::default(); QUADS_NUMBER];
         for i in 0..(world::WIDTH * world::HEIGHT)
@@ -195,7 +195,6 @@ impl WorldRenderer
                 vertices[(i * 4) + j].color = color;
             }
         }
-        //TODO check for size change instead of resizing every time
         if world.entities.0.len() * std::mem::size_of::<Vertex>() * 3 != self.entities_vertices.get_size()
         {
             let mut vertices = Vec::new();

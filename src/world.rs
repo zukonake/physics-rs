@@ -128,7 +128,7 @@ impl Map
 
 pub struct World
 {
-    map: Map, //TODO move funcs to World
+    map: Map,
     pub entities: entity::EntityContainer,
 }
 
@@ -173,7 +173,7 @@ impl World
                     let position = [x as Coordinate, y as Coordinate];
                     match self.at_mut(position)
                     {
-                        Some(tile) => std::mem::swap(tile, &mut value.clone()), //TODO replace?
+                        Some(tile) => std::mem::swap(tile, &mut value.clone()),
                         None => (),
                     }
                 }
